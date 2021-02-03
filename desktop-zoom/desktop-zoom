@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# desktop-zoom - manage gnome magnifier
+# usage: desktop-zoom [ zoom-in | zoom-out ]
+
+# suggested .xbindkeysrc settings:
+#    "desktop-zoom zoom-in"
+#      shift + control + b:4
+#
+#    "desktop-zoom zoom-out"
+#      shift + control + b:5
+#
+# Requires:
+# 
+# * xbindkey
+
+## preferences
+# zoom factor increment
+inc="0.2"
+# minimum (initial) zoom factor (don't set less than 1)
+min="1.2"
+# maximum zoom factor
+max="5.0"
+
+# dconf paths
+mstat="/org/gnome/desktop/a11y/applications/screen-magnifier-enabled"
+mfac="/org/gnome/desktop/a11y/magnifier/mag-factor"
+mtracking="/org/gnome/desktop/a11y/magnifier/mouse-tracking"
+
+PID=$$
+
+exit_if_already_running () {
+  if [ -f /tmp/desktop-zoom.pid ]
+    then
+      if pgrep -F /tmp/desktop-zoom.pid
+        then
+          echo "Another instance of desktop-zoom is already running, exiting."
+          exit 10
+      fi
+    fi
+  echo $PID > /tmp/desktop-zoom.pid
+}
+
+delete_pid_file () {
+  rm -f /tmp/desktop-zoom.pid
+}
+
+exit_if_already_running
+
+cur=$(dconf read $mfac)
+
+if [[ "$1" == "zoom-in" ]] ; then
+
+    # make sure zoom is enabled
+    # start at min if it was off
+    if [[ $(dconf read $mstat) == "false" ]] ; then
+      dconf write $mfac $min
+      dconf write $mstat "true"
+    fi
+
+  new=$(bc <<< "$cur + $inc")
+  if [[ $(bc <<< "$new <= $max") -ne 0 ]] ; then
+    prevtracking=`dconf read $mtracking`
+    dconf write $mtracking "'proportional'"
+    dconf write $mfac $new
+    
+    # We need to shake the mouse cursor 1 pixel and back so that the magnifier centers on the cursor during zoom 
+    # instead of zooming to the center of the screen
+    xdotool - <<EOF
+mousemove_relative --sync 1 0
+EOF
+    dconf write $mtracking "$prevtracking"
+  fi
+fi
+
+if [[ "$1" == "zoom-out" ]] ; then
+
+    # only if zoom is enabled
+    if [[ $(dconf read $mstat) == "true" ]] ; then
+
+      new=$(bc <<< "$cur - $inc")
+      if [[ $(bc <<< "$new >= $min") -ne 0 ]] ; then
+        dconf write $mfac $new
+      else
+        dconf write $mstat "false"
+      fi
+    fi
+fi
+
+delete_pid_file

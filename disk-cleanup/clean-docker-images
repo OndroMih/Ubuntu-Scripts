@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# remove dangling docker images (those that don't have tags, e.g. intermediary images)
+
+remove_dangling () {
+  docker image prune
+  # If Docker API older than 1.25, use the following command
+  #docker images -f "dangling=true" -q | xargs -r docker rmi
+}
+
+# remove all unused (all that are not used by existing Docker containers
+
+remove_all () {
+  docker image prune -a
+  # If Docker API older than 1.25, use the following command
+  #docker images -q | xargs -r docker rmi
+}
+
+remove_dangling

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# NAME: toggle-touchpad
+# PATH: /home/$USER/bin
+# DESC: Update pulseaudio output device when HDMI TV plugged / unplugged
+# CALL: called from Keyboard Shortcut `Super`+`T`
+# DATE: Created Dec 23, 2016.
+# NOTE: Written for AU question: http://askubuntu.com/questions/863746/keyboard-shortcut-to-disable-the-laptop-touchpad/863750?noredirect=1#comment1333958_863750
+
+
+# Detect device number of the touchpad from xinput
+DEVICE_NUMBER=`xinput list | grep Touchpad | sed 's/.*id=\([0-9]\+\).*/\1/g'`
+if [[ $(xinput list ${DEVICE_NUMBER} | grep -Ec "disabled") -eq 1 ]]; then
+    xinput enable ${DEVICE_NUMBER}
+    DISPLAY=:0 notify-send --urgency=low --icon=/usr/share/icons/HighContrast/48x48/devices/input-touchpad.png "Touchpad enabled"
+else
+    xinput disable ${DEVICE_NUMBER}
+    DISPLAY=:0 notify-send --urgency=low --icon=/usr/share/icons/HighContrast/48x48/status/touchpad-disabled.png "Touchpad disabled"
+fi
+
+exit 0
